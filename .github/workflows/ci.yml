@@ -1,0 +1,37 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.9"
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install locust
+
+    - name: Start Flask service with Gunicorn
+      run: |
+        nohup gunicorn -w 4 -b 0.0.0.0:5000 src.app:app &
+      env:
+        FLASK_ENV: development
+
+    - name: Run high-load test
+      run: |
+        locust -f src/load_test.py --headless -u 10000 -r 1000 --run-time 1m --host http://localhost:5000
