@@ -2,6 +2,8 @@ import logging
 from flask import Flask, request, jsonify
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import avg, count
+import redis
+from hashlib import sha256
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -11,6 +13,9 @@ spark = SparkSession.builder.appName("microservice").getOrCreate()
 
 # Reduce Spark log verbosity
 spark.sparkContext.setLogLevel("WARN")
+
+# Configure Redis for caching
+cache = redis.StrictRedis(host="localhost", port=6379, decode_responses=True)
 
 # Configure logging
 logging.basicConfig(
@@ -28,12 +33,17 @@ def process_data():
     try:
         logger.info("Received request to /process")
         data = request.get_json()
-        logger.info(f"Request data: {data}")
+        cache_key = sha256(str(data).encode()).hexdigest()
 
-        # Create Spark DataFrame
+        # Check if the result is cached
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            logger.info("Cache hit")
+            return jsonify(eval(cached_result)), 200
+
+        # Process data using Spark
+        logger.info("Cache miss, processing data with Spark")
         df = spark.createDataFrame(data)
-
-        # Perform simple data analysis
         result = df.groupBy("gender").agg(
             avg("salary").alias("average_salary"),
             count("*").alias("count")
@@ -41,7 +51,9 @@ def process_data():
 
         # Convert results to JSON format
         result_json = [{"gender": row["gender"], "average_salary": row["average_salary"], "count": row["count"]} for row in result]
-        logger.info(f"Analysis results: {result_json}")
+
+        # Store the result in cache
+        cache.set(cache_key, str(result_json))
 
         return jsonify(result_json), 200
     except Exception as e:
