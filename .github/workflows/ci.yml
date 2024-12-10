@@ -26,9 +26,9 @@ jobs:
         pip install -r requirements.txt
         pip install locust redis
 
-    - name: Start Redis service
+    - name: Set up Docker Compose
       run: |
-        docker run -d -p 6379:6379 redis
+        docker-compose -f docker-compose.redis.yml up -d
 
     - name: Start Flask service with Gunicorn
       run: |
