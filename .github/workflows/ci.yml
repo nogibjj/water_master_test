@@ -26,9 +26,13 @@ jobs:
         pip install -r requirements.txt
         pip install locust redis
 
+    - name: Start Redis service
+      run: |
+        docker run -d -p 6379:6379 redis
+
     - name: Start Flask service with Gunicorn
       run: |
-        nohup gunicorn -w 8 --threads 4 -b 0.0.0.0:5000 src.app:app &
+        nohup gunicorn -w 16 --threads 8 -b 0.0.0.0:5000 src.app:app &
       env:
         FLASK_ENV: production
 
