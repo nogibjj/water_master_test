@@ -8,11 +8,9 @@ from hashlib import sha256
 # Initialize Flask app
 app = Flask(__name__)
 
-# Initialize SparkSession
+# Initialize SparkSession (global initialization)
 spark = SparkSession.builder.appName("microservice").getOrCreate()
-
-# Reduce Spark log verbosity
-spark.sparkContext.setLogLevel("WARN")
+spark.sparkContext.setLogLevel("WARN")  # Reduce Spark logging
 
 # Configure Redis for caching
 cache = redis.StrictRedis(host="localhost", port=6379, decode_responses=True)
@@ -28,7 +26,7 @@ logger = logging.getLogger(__name__)
 @app.route("/process", methods=["POST"])
 def process_data():
     """
-    Receive JSON data stream and return analysis results.
+    Receive JSON data stream, cache results, and return analysis.
     """
     try:
         logger.info("Received request to /process")
