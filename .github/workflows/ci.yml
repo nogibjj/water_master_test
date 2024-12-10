@@ -21,12 +21,17 @@ jobs:
       with:
         python-version: "3.9"
 
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker-compose
+
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
         pip install locust redis
 
-    - name: Set up Docker Compose
+    - name: Start Redis service
       run: |
         docker-compose -f docker-compose.redis.yml up -d
 
